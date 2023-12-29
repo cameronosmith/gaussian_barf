@@ -343,7 +343,7 @@ def readFlowCamSceneInfo(path, images, eval, llffhold=8):
     pcd= BasicPointCloud(points=points, colors=rgb, normals=points*0)
     ply_path="tmp.ply"
     print("writing ply")
-    #storePly(ply_path, points, rgb)
+    storePly(ply_path, points, rgb)
 
     test_idxs=list(range(len(cam_infos[0])))[1:-1:10] if eval else []
     if eval:
