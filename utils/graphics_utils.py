@@ -175,9 +175,7 @@ def matrix_to_euler_angles(matrix: torch.Tensor, convention="XYZ") -> torch.Tens
     i2 = _index_from_letter(convention[2])
     tait_bryan = i0 != i2
     if tait_bryan:
-        central_angle = torch.asin(
-            matrix[..., i0, i2] * (-1.0 if i0 - i2 in [-1, 2] else 1.0)
-        )
+        central_angle = torch.asin( (matrix[..., i0, i2] * (-1.0 if i0 - i2 in [-1, 2] else 1.0)).clip(-1,1))
     else:
         central_angle = torch.acos(matrix[..., i0, i0])
 

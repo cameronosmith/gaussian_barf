@@ -65,6 +65,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     viewpoint_stack = scene.getTrainCameras().copy()
     viewpoint_stack_gt = scene.gt_cameras
 
+
     # Setup poses and focals as parameters to optionally fine-tune
     poses = torch.stack([cam.world_view_transform.T for cam in viewpoint_stack])
     focal_params = torch.tensor([viewpoint_stack[0].FoVx,viewpoint_stack[0].FoVy]).detach().clone().cuda()
@@ -99,13 +100,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
         s=1
         c_iteration = iteration - args.start_cam_opt 
-        cam_lr = (1e-3 if c_iteration < s*3000 else 5e-4 if c_iteration < s*4000 else 1e-4 if c_iteration<s*8000 else 5e-5 if c_iteration<s*10000 else 5e-6 if c_iteration<s*24000 else 0)/2
-        alpha=min(1,c_iteration/30_000)
-        cam_lr = (1-alpha)*5e-4+alpha*1e-7
-        if args.cam_lr!=0:cam_lr=args.cam_lr
-        #if c_iteration%10000==0 and iteration>1: args.start_cam_opt=iteration-1
-
+        cam_lr = (5e-5 if c_iteration<s*15000 else 5e-6 if c_iteration<s*20000 else 0)
         tb_writer.add_scalar('train_loss_patches/cam_lr', cam_lr, iteration)
+
         for param_group in cam_optim.param_groups: param_group['lr'] = cam_lr
         for param_group in focal_optim.param_groups: param_group['lr'] = cam_lr
 
@@ -153,9 +150,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             if iteration == opt.iterations:
                 progress_bar.close()
 
-            if iteration%300==1 and 1 and iteration>10:
-                torch.save([transf_params.detach().clone(),focal_params.detach().clone()],scene.model_path+"/poses.pt")
-                colmap_cams=any([x in scene.getTrainCameras()[0].image_name for x in ["DSC","IMG","DJI"]]) or 0
+            if iteration%100==0:torch.save([transf_params.detach().clone(),focal_params.detach().clone()],scene.model_path+"/poses.pt")
+            if (iteration in [300,500,1000] or iteration%3000==1 and 1) and 0:
+                colmap_cams=any([x in scene.getTrainCameras()[0].image_name for x in ["DSC","IMG","DJI","frame"]]) or 0
                 if not colmap_cams:
                     #stride=10 if len(transf_params)>200 else 1
                     all_cams=sorted(scene.getTestCameras()+scene.getTrainCameras(),key=lambda x:x.image_name)
@@ -312,7 +309,7 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
             if config['cameras'] and len(config['cameras']) > 0:
                 l1_test = 0.0
                 psnr_test = 0.0
-                colmap_cams=any([x in scene.getTrainCameras()[0].image_name for x in ["DSC","IMG","DJI"]]) or 0
+                colmap_cams=any([x in scene.getTrainCameras()[0].image_name for x in ["DSC","IMG","DJI","frame"]]) or 0
                 if not colmap_cams:
                     for idx, viewpoint in enumerate(config['cameras']):
                         #image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs)["render"], 0.0, 1.0)
@@ -344,6 +341,7 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                     tb_writer.add_scalar(config['name'] + '/loss_viewpoint - l1_loss', l1_test, iteration)
                     tb_writer.add_scalar(config['name'] + '/loss_viewpoint - psnr', psnr_test, iteration)
 
+        with open("psnrs/"+args.source_path.split("/")[-1][:-3], 'w') as f: f.write( str(psnr_test.item()) )
         if tb_writer:
             tb_writer.add_histogram("scene/opacity_histogram", scene.gaussians.get_opacity, iteration)
             tb_writer.add_scalar('total_points', scene.gaussians.get_xyz.shape[0], iteration)

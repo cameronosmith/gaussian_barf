@@ -152,8 +152,9 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
     cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
     cam_infos = cam_infos_=sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 
-    start_i=0 if "cat" not in path else 35
-    max_i = (65 if "kitchen" in path else 60 if "horns" in path else 30 if "flower" in path else 60 if "teddybear" in path else 60 if "hydrant" in path else 150)+start_i
+    start_i,max_i=0,1000
+    #start_i=0 if "cat" not in path else 35
+    #max_i = (65 if "kitchen" in path else 60 if "horns" in path else 30 if "flower" in path else 60 if "teddybear" in path else 60 if "hydrant" in path else 150)+start_i
     print("max i",max_i)
     if 0:
         import torch
@@ -328,8 +329,10 @@ def readFlowCamSceneInfo(path, images, eval, llffhold=8):
 
     stride=max(1,int(len(tmp["world_crds"].flatten(0,1))/150_000))
     print("stride: ",stride)
-    points=tmp["world_crds"].flatten(0,1)[::2].numpy()
-    rgb=tmp["rgb_crds"].flatten(0,1)[::2].numpy()
+    #points=tmp["world_crds"].flatten(0,1)[::5].numpy()
+    #rgb=tmp["rgb_crds"].flatten(0,1)[::5].numpy()
+    points=tmp["world_crds"].flatten(0,1)[::5].numpy()
+    rgb=tmp["rgb_crds"].flatten(0,1)[::5].numpy()
 
     #idxs=torch.randperm(len(tmp["rgb"][:,0].flatten()))[:200000]
     #points=torch.nn.functional.interpolate(tmp["world_crds"].permute(0,2,1).unflatten(-1,tmp["flow_inp_"][0].shape[1:]),tmp["rgb"].shape[-2:]).flatten(-2,-1).permute(0,2,1).flatten(0,1)[idxs].numpy()
