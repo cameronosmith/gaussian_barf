@@ -12,6 +12,7 @@
 import os
 import torch
 import numpy as np
+from matplotlib import cm
 import imageio
 import scipy.spatial
 from random import randint
@@ -40,6 +41,8 @@ except ImportError:
 
 sys.path.append("../flowmap")
 import geometry
+
+from utils.camera_utils import render_time_interp
 
 ch_sec = lambda x: rearrange(x,"... c x y -> ... (x y) c")
 ch_fst = lambda src,x=None:rearrange(src,"... (x y) c -> ... c x y",x=int(src.size(-2)**(.5)) if x is None else x)
@@ -150,6 +153,43 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             if iteration == opt.iterations:
                 progress_bar.close()
 
+            if args.render_checkpoint:
+                gaussians.load_ply(args.render_checkpoint)
+                all_cams_=sorted(scene.getTrainCameras(),key=lambda x:x.image_name)
+                all_cams=torch.stack([lift_to_poses(transf_params[int(cam.image_name)]) for cam in all_cams_])
+                interp_poses=render_time_interp(all_cams)
+                interp_poses2=render_time_interp(all_cams,wobble=True)
+                novel_images,vid_depths,novel_both=[],[],[]
+
+                #fig=plt.figure();ax = fig.add_subplot(111, projection='3d');
+                #ax.plot(*all_cams[:,:3,-1].cpu().unbind(1),c="red",label="Estimated Trajectory");
+                #ax.plot(*interp_poses[:,:3,-1].cpu().unbind(1),c="black",label="GT Trajectory");
+                #ax.plot(*interp_poses2[:,:3,-1].cpu().unbind(1),c="blue",label="GT Trajectory");
+                #plt.legend()
+                #plt.savefig("/home/camsmith/tmp.png")
+                #plt.close()
+
+                for i,cam in enumerate(interp_poses):
+                    print(i)
+                    print("rendering")
+                    vid_image = render(all_cams_[0], gaussians, pipe, background,pre_transf=cam,fov=focal_params)["render"]
+                    novel_images.append(vid_image)
+                    vid_depths.append( render(all_cams_[0], gaussians, pipe, background+10,pre_transf=cam,fov=focal_params,render_depth=True)["render"][0] )
+                    print("rendered")
+                min_depth=min([x.cpu().min() for x in vid_depths])
+                print("doing colormaps")
+                vid_depths =[ torch.from_numpy(cm.get_cmap('magma')(min_depth/vid_depth.cpu().numpy())).squeeze(-2)[...,:3].permute(2,0,1) for vid_depth in vid_depths] 
+                novel_both =[ torch.cat((x.cpu(),y.cpu()),-1) for x,y in zip(novel_images,vid_depths)] 
+                frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(novel_both).clip(0,1)]
+                print("writing frames")
+                imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_both.mp4", frames, fps=8, quality=7)
+                print("output/renders/"+args.render_checkpoint.split("/")[1]+"_both.mp4")
+                frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(vid_depths).clip(0,1)]
+                imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_depth.mp4", frames, fps=8, quality=7)
+                frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(novel_images).clip(0,1)]
+                imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_rgb.mp4", frames, fps=8, quality=7)
+                zz
+
             if iteration%100==0:torch.save([transf_params.detach().clone(),focal_params.detach().clone()],scene.model_path+"/poses.pt")
             if (iteration in [300,500,1000] or iteration%3000==1 and 1) and 0:
                 colmap_cams=any([x in scene.getTrainCameras()[0].image_name for x in ["DSC","IMG","DJI","frame"]]) or 0
@@ -218,7 +258,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             ATE=(pos_gt_-pos_est_).square().mean().sqrt()
             tb_writer.add_scalar('train_loss_patches/ATE', ATE, iteration)
 
-            if iteration%50==1 and 1:
+            if iteration%500==1 and 1:
                 print("ATE",ATE)
                 #print("making pose plot")
                 tb_writer.add_images("render_vs_gt", torch.stack((image,gt_image)).clip(0,1), global_step=iteration)
@@ -370,6 +410,7 @@ if __name__ == "__main__":
     parser.add_argument('-n','--name', type=str, default="gauss_splat")
     parser.add_argument("--checkpoint_iterations", nargs="+", type=int, default=[])
     parser.add_argument("--start_checkpoint", type=str, default = None)
+    parser.add_argument("--render_checkpoint", type=str, default = None)
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
 

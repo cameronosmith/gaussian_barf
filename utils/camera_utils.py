@@ -13,6 +13,16 @@ from scene.cameras import Camera
 import numpy as np
 from utils.general_utils import PILtoTorch
 from utils.graphics_utils import fov2focal
+import torch
+
+
+import sys
+sys.path.append("../flowmap")
+sys.path.append("../../flowmap")
+import geometry
+
+from torchcubicspline import (natural_cubic_spline_coeffs, NaturalCubicSpline)
+import splines.quaternion
 
 WARNED = False
 
@@ -83,3 +93,47 @@ def camera_to_JSON(id, camera : Camera):
         'fx' : fov2focal(camera.FovX, camera.width)
     }
     return camera_entry
+
+def render_time_interp(all_poses,wobble=False):
+    pos_spline_idxs=torch.linspace(0,all_poses.size(0)-1,15 if 1 else 40)
+    rot_spline_idxs=torch.linspace(0,all_poses.size(0)-1,15 if 1 else 40)
+
+    all_pos_splines=[]
+    all_quat_splines=[]
+
+    b_i=0
+    all_pos_spline=[]
+    all_quat_spline=[]
+
+    obj_i=0
+    all_pos_spline.append(NaturalCubicSpline(natural_cubic_spline_coeffs(pos_spline_idxs, all_poses[pos_spline_idxs.long(),:3,-1].cpu())))
+    quats=geometry.matrix_to_quaternion(all_poses[:,:3,:3])
+    all_quat_spline.append(splines.quaternion.PiecewiseSlerp([splines.quaternion.UnitQuaternion.from_unit_xyzw(quat_) 
+                                    for quat_ in quats[rot_spline_idxs.long()].detach().cpu().numpy()],grid=rot_spline_idxs.detach().tolist()))
+    all_pos_splines.append(all_pos_spline)
+    all_quat_splines.append(all_quat_spline)
+
+    n=100
+    thetas=np.linspace(0,np.pi*10*len(all_poses)/60,n)
+
+    query_poses=[]
+    for t_i,t in enumerate(torch.linspace(0,all_poses.size(0)-1,n)):
+        print(t)
+
+        custom_poses_b=[]
+        pos_splines=all_pos_splines[0]
+        quat_splines_=all_quat_splines[0]
+        custom_poses=[]
+        pos_spline=pos_splines[0]
+        quat_spline_=quat_splines_[0]
+        custom_pose=torch.eye(4).cuda()
+        custom_pose[:3,-1]=pos_spline.evaluate(t)
+        scale = .015 #.3 * model.far/30
+        if wobble:
+            custom_pose[0,-1]+=np.cos(thetas[t_i]) * scale
+            custom_pose[1,-1]+=np.sin(thetas[t_i]) * scale
+        quat_eval=quat_spline_.evaluate(t.item())
+        curr_quats = torch.tensor(list(quat_eval.vector)+[quat_eval.scalar])
+        custom_pose[:3,:3] = geometry.quaternion_to_matrix(curr_quats)
+        query_poses.append(custom_pose)
+    return torch.stack(query_poses)

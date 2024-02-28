@@ -163,6 +163,7 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
 
     cam_infos=cam_infos[start_i:max_i]
     test_idxs=list(range(len(cam_infos)))[1:-1:10] if eval else []
+    print(test_idxs)
     if eval:
         train_cam_infos = cam_infos#[c for idx, c in enumerate(cam_infos) if idx not in test_idxs]
         test_cam_infos = [c for idx, c in enumerate(cam_infos) if idx in test_idxs]
@@ -305,18 +306,19 @@ def readFlowCamCameras(tmp):
                                   image_path=image_path_, image_name=image_name_, width=width_, height=height_,norm_K=norm_K)
             cams.append(cam_info_)
         return cams
-    out= [get_poses("poses","intrinsics"),get_poses("novel_poses" if "novel_poses" in tmp else "poses","intrinsics"),get_poses("gt_poses","gt_intrinsics")]
+    out= [get_poses("poses","intrinsics"),get_poses("novel_poses" if "novel_poses" in tmp else "poses","intrinsics"),get_poses("gt_poses","gt_intrinsics") if "gt_poses" in tmp else get_poses("poses","intrinsics")]
     #print("USING GT INTRINSICS\n*10")
     #out= [get_poses("poses","gt_intrinsics"),get_poses("novel_poses" if "novel_poses" in tmp else "poses","intrinsics"),get_poses("gt_poses","gt_intrinsics")]
     return out
 def readFlowCamSceneInfo(path, images, eval, llffhold=8):
-    eval=True
 
     #same coordinate system as colmap -- just verify c2w vs w2c, unnormalize intrinsics here
     #just load in point cloud xyz and rgb below
     import torch
     tmp = {k:v.cpu() for k,v in torch.load(path).items()}
     if tmp["rgb"].max()<2: tmp["rgb"]=255*(tmp["rgb"]*.5+.5)
+
+    eval="gt_poses" in tmp
 
     #sf=.5
     #with torch.no_grad(): tmp["world_crds"]=torch.nn.functional.interpolate(tmp["world_crds"].permute(0,2,1).unflatten(-1,tmp["rgb"].shape[-2:]),scale_factor=sf).flatten(-2,-1).permute(0,2,1)
@@ -349,6 +351,7 @@ def readFlowCamSceneInfo(path, images, eval, llffhold=8):
     storePly(ply_path, points, rgb)
 
     test_idxs=list(range(len(cam_infos[0])))[1:-1:10] if eval else []
+    print(test_idxs)
     if eval:
         #train_cam_infos = [c for idx, c in enumerate(cam_infos[0]) if idx not in test_idxs]
         train_cam_infos =cam_infos[0] #[c for idx, c in enumerate(cam_infos[0]) ]

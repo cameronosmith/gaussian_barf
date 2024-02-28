@@ -82,8 +82,8 @@ class Scene:
 
         if self.loaded_iter or 0:
             #self.gaussians.load_ply(os.path.join(self.model_path, "point_cloud", "iteration_" + str(self.loaded_iter), "point_cloud.ply"))
-            print("loading from iter")
-            self.gaussians.load_ply("output/smaller_pc/point_cloud/iteration_1000/point_cloud.ply")
+            print("hardcoded loading from iter")
+            self.gaussians.load_ply("output/gt_k_refactor_horns_splat/point_cloud/iteration_30000/point_cloud.ply")
         else:
             self.gaussians.create_from_pcd(scene_info.point_cloud, self.cameras_extent)
 
