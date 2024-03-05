@@ -9,6 +9,7 @@
 # For inquiries contact  george.drettakis@inria.fr
 #
 
+import json
 import os
 import torch
 import numpy as np
@@ -17,37 +18,28 @@ import imageio
 import scipy.spatial
 from random import randint
 from utils.loss_utils import l1_loss, ssim
-import piqa
 import random
-
-#import flow_vis_torch
-import matplotlib.pyplot as plt
 import wandb
-from gaussian_renderer import render, network_gui,render_
+from pathlib import Path
+import matplotlib.pyplot as plt
+from gaussian_renderer import render,render_
 import sys
 from scene import Scene, GaussianModel
 from utils.graphics_utils import matrix_to_euler_angles,lift_to_poses
-from utils.general_utils import safe_state
 import uuid
 from tqdm import tqdm
 from utils.image_utils import psnr
+from lpipsPyTorch import lpips
 from argparse import ArgumentParser, Namespace
 from arguments import ModelParams, PipelineParams, OptimizationParams
+import torchvision
 try:
     from torch.utils.tensorboard import SummaryWriter
     TENSORBOARD_FOUND = True
 except ImportError:
     TENSORBOARD_FOUND = False
 
-sys.path.append("../flowmap")
-import geometry
-
 from utils.camera_utils import render_time_interp
-
-ch_sec = lambda x: rearrange(x,"... c x y -> ... (x y) c")
-ch_fst = lambda src,x=None:rearrange(src,"... (x y) c -> ... c x y",x=int(src.size(-2)**(.5)) if x is None else x)
-hom    = lambda x: torch.cat((x,torch.ones_like(x[...,[0]])),-1)
-unhom  = lambda x: x[...,:-1]/(1e-8+x[...,-1:])
 
 def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoint_iterations, checkpoint, debug_from,args):
     first_iter = 0
@@ -87,7 +79,6 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     ema_loss_for_log = 0.0
     progress_bar = tqdm(range(first_iter, opt.iterations), desc="Training progress")
     first_iter += 1
-    lpips=piqa.lpips.LPIPS().cuda()
     since_cam_step=0
     for iteration in range(first_iter, opt.iterations + 1):        
         since_cam_step+=1
@@ -188,7 +179,6 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_depth.mp4", frames, fps=8, quality=7)
                 frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(novel_images).clip(0,1)]
                 imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_rgb.mp4", frames, fps=8, quality=7)
-                zz
 
             if iteration%100==0:torch.save([transf_params.detach().clone(),focal_params.detach().clone()],scene.model_path+"/poses.pt")
             if (iteration in [300,500,1000] or iteration%3000==1 and 1) and 0:
@@ -238,14 +228,6 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     imageio.mimwrite(f, frames, fps=8, quality=7)
                     wandb.log({f'render_depth':wandb.Video(f, format='mp4', fps=8)})
                     torch.cuda.empty_cache()
-
-            if iteration%50==1 and 0:
-                gt_flow_vis=flow_vis_torch.flow_to_color(gt_flow)/255
-                est_flow_vis=flow_vis_torch.flow_to_color(pose_flow)/255
-                tb_writer.add_images("flow_vs_gt", torch.stack((gt_flow_vis,est_flow_vis)).clip(0,1), global_step=iteration)
-
-                depths=[((11-x).clip(min=1e-5)/11).cpu() for x in [gt_depth[0],render_depth]]
-                tb_writer.add_images("depth_vs_gt", torch.stack(depths).clip(0,1)[:,None], global_step=iteration)
 
             # Pose logging
             #try:
@@ -340,6 +322,8 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
 
     # Report test and samples of training set
     if 1 and iteration%500==1:# in testing_iterations:
+        Path("metrics").mkdir(exist_ok=True, parents=True)
+
         torch.cuda.empty_cache()
         validation_configs = ({'name': 'test', 'cameras' : scene.getTestCameras()}, 
                               {'name': 'train', 'cameras' : [scene.getTrainCameras()[idx % len(scene.getTrainCameras())] for idx in range(5, 30, 5)]}
@@ -347,32 +331,47 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
 
         for config in validation_configs:
             if config['cameras'] and len(config['cameras']) > 0:
+                psnrs = []
+                lpipss = []
+                ssims = []
+
                 l1_test = 0.0
                 psnr_test = 0.0
                 colmap_cams=any([x in scene.getTrainCameras()[0].image_name for x in ["DSC","IMG","DJI","frame"]]) or 0
-                if not colmap_cams:
-                    for idx, viewpoint in enumerate(config['cameras']):
-                        #image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs)["render"], 0.0, 1.0)
-                        #cam_i_=scene.getTrainCameras()[0].image_name
+                for idx, viewpoint in enumerate(config['cameras']):
+                    if not colmap_cams:
                         image = render(viewpoint, scene.gaussians, pre_transf=lift_to_poses(transf_params[int(viewpoint.image_name) if 1 else idx]),fov=focal_params,*renderArgs)["render"].clip(0,1)
-                        #image = render(viewpoint, scene.gaussians, pre_transf=lift_to_poses(transf_params[int(viewpoint.uid) if 1 else idx]),fov=focal_params,*renderArgs)["render"].clip(0,1)
-                        gt_image = torch.clamp(viewpoint.original_image.to("cuda"), 0.0, 1.0)
-                        if tb_writer and (idx < 5):
-                            tb_writer.add_images(config['name'] + "_view_{}/render".format(viewpoint.image_name), image[None], global_step=iteration)
-                            if iteration == testing_iterations[0]:
-                                tb_writer.add_images(config['name'] + "_view_{}/ground_truth".format(viewpoint.image_name), gt_image[None], global_step=iteration)
-                        l1_test += l1_loss(image, gt_image).mean().double()
-                        psnr_test += psnr(image, gt_image).mean().double()
-                else:
-                    for idx, viewpoint in enumerate(config['cameras']):
+                    else:
                         image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs)["render"], 0.0, 1.0)
-                        gt_image = torch.clamp(viewpoint.original_image.to("cuda"), 0.0, 1.0)
-                        if tb_writer and (idx < 5):
-                            tb_writer.add_images(config['name'] + "_view_{}/render".format(viewpoint.image_name), image[None], global_step=iteration)
-                            if iteration == testing_iterations[0]:
-                                tb_writer.add_images(config['name'] + "_view_{}/ground_truth".format(viewpoint.image_name), gt_image[None], global_step=iteration)
-                        l1_test += l1_loss(image, gt_image).mean().double()
-                        psnr_test += psnr(image, gt_image).mean().double()
+                    gt_image = torch.clamp(viewpoint.original_image.to("cuda"), 0.0, 1.0)
+                    if tb_writer and (idx < 5):
+                        tb_writer.add_images(config['name'] + "_view_{}/render".format(viewpoint.image_name), image[None], global_step=iteration)
+                        if iteration == testing_iterations[0]:
+                            tb_writer.add_images(config['name'] + "_view_{}/ground_truth".format(viewpoint.image_name), gt_image[None], global_step=iteration)
+                    l1_test += l1_loss(image, gt_image).mean().double()
+                    psnr_test += psnr(image, gt_image).mean().double()
+
+                    if config["name"] == "test":
+                        torchvision.utils.save_image(image, f"metrics/{config['cameras'][idx].image_name}.png")
+
+                    psnrs.append(psnr(image, gt_image).mean().item())
+                    lpipss.append(lpips(image, gt_image).item())
+                    ssims.append(ssim(image, gt_image).item())
+
+                psnrs = float(np.mean(psnrs))
+                lpipss = float(np.mean(lpipss))
+                ssims = float(np.mean(ssims))
+
+                # Save the metrics.
+                if config["name"] == "test":
+                    metrics = {
+                        "psnr": psnrs,
+                        "lpips": lpipss,
+                        "ssim": ssims,
+                        "step": iteration,
+                    }
+                    with Path(f"metrics/{args.name}.json").open("w") as f:
+                        json.dump(metrics, f)
 
                 psnr_test /= len(config['cameras'])
                 l1_test /= len(config['cameras'])          
@@ -381,7 +380,6 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                     tb_writer.add_scalar(config['name'] + '/loss_viewpoint - l1_loss', l1_test, iteration)
                     tb_writer.add_scalar(config['name'] + '/loss_viewpoint - psnr', psnr_test, iteration)
 
-        with open("psnrs/"+args.source_path.split("/")[-1][:-3], 'w') as f: f.write( str(psnr_test.item()) )
         if tb_writer:
             tb_writer.add_histogram("scene/opacity_histogram", scene.gaussians.get_opacity, iteration)
             tb_writer.add_scalar('total_points', scene.gaussians.get_xyz.shape[0], iteration)
@@ -395,7 +393,7 @@ if __name__ == "__main__":
     pp = PipelineParams(parser)
     parser.add_argument('--ip', type=str, default="127.0.0.1")
     parser.add_argument('--port', type=int, default=6009)
-    parser.add_argument('--start_cam_opt', type=int, default=1e7)
+    parser.add_argument('--start_cam_opt', type=int, default=3000)
     parser.add_argument('--cam_lr', type=float, default=0)
     parser.add_argument('--debug_from', type=int, default=-1)
     parser.add_argument('--detect_anomaly', action='store_true', default=False)
@@ -414,8 +412,8 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
 
-    run = wandb.init(entity="scene-representation-group",project="dyn-pixelNeRF",mode="online" if args.online else "disabled",
-                    name=args.name,dir="/nobackup/users/camsmith/wandb", sync_tensorboard=True)
+    run = wandb.init(entity="scene-representation-group",project="gaussian-barf",mode="online" if args.online else "disabled",
+                    name=args.name, sync_tensorboard=True)
     
     print("Optimizing " + args.model_path)
 
