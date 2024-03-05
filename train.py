@@ -322,7 +322,7 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
 
     # Report test and samples of training set
     if 1 and iteration%500==1:# in testing_iterations:
-        Path("metrics").mkdir(exist_ok=True, parents=True)
+        Path(f"metrics/{args.name}").mkdir(exist_ok=True, parents=True)
 
         torch.cuda.empty_cache()
         validation_configs = ({'name': 'test', 'cameras' : scene.getTestCameras()}, 
@@ -352,7 +352,7 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                     psnr_test += psnr(image, gt_image).mean().double()
 
                     if config["name"] == "test":
-                        torchvision.utils.save_image(image, f"metrics/{config['cameras'][idx].image_name}.png")
+                        torchvision.utils.save_image(image, f"metrics/{args.name}/{config['cameras'][idx].image_name}.png")
 
                     psnrs.append(psnr(image, gt_image).mean().item())
                     lpipss.append(lpips(image, gt_image).item())
@@ -370,7 +370,7 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                         "ssim": ssims,
                         "step": iteration,
                     }
-                    with Path(f"metrics/{args.name}.json").open("w") as f:
+                    with Path(f"metrics/{args.name}/metrics.json").open("w") as f:
                         json.dump(metrics, f)
 
                 psnr_test /= len(config['cameras'])
