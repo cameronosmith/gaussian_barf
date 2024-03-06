@@ -45,8 +45,7 @@ def submit_slurm_job(
 #SBATCH --time={time}
 
 source {Path.home()}/.bashrc
-/scratch/charatan/miniconda3/bin/conda init
-eval $(conda shell.bash hook)
+source /scratch/charatan/miniconda3/etc/profile.d/conda.sh
 cd {job_dir}
 conda activate {env_name}
 
