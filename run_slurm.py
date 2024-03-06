@@ -97,7 +97,7 @@ if __name__ == "__main__":
         job_dir,
         f"{command}",
         f"{getpass.getuser()}@mit.edu",
-        "64G",
+        "128G",
         1,
         8,
         "24:00:00",
