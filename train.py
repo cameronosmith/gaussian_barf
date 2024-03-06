@@ -343,10 +343,6 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                     # Get the camera index within the viewpoint stack.
                     camera_index = [camera.image_name for camera in viewpoint_stack].index(viewpoint.image_name)
 
-                    # Trust but verify...
-                    # If this throws, the COLMAP data doesn't have the standard IDs (starting at 1).
-                    assert camera_index == viewpoint.colmap_id - 1
-
                     image = render(viewpoint, scene.gaussians, pre_transf=lift_to_poses(transf_params[camera_index]),fov=focal_params,*renderArgs)["render"].clip(0,1)
                
                     gt_image = torch.clamp(viewpoint.original_image.to("cuda"), 0.0, 1.0)
