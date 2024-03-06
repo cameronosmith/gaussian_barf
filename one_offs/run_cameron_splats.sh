@@ -1,6 +1,5 @@
 for METHOD in \
-    colmap \
-    flowmap
+    colmap
 do
     for SCENE in \
         bench \
@@ -14,6 +13,6 @@ do
         office0 \
         room0
     do
-        python3 run_slurm.py python3 train.py -s /scratch/charatan/flowmap_converted/${METHOD}/${SCENE} --name paper_c1_${SCENE}_${METHOD} -o
+        python3 run_slurm.py python3 train.py -s /scratch/charatan/flowmap_converted/${METHOD}/${SCENE} --name paper_c2_${SCENE}_${METHOD} -o
     done
 done
