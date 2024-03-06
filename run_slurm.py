@@ -41,6 +41,7 @@ def submit_slurm_job(
 #SBATCH --cpus-per-task={num_cpus}
 #SBATCH --mem={memory}
 #SBATCH --partition=vision-sitzmann
+#SBATCH --qos=vision-sitzmann-main
 #SBATCH --time={time}
 
 source {Path.home()}/.bashrc
