@@ -12,6 +12,6 @@ do
         tandt_caterpillar \
         tandt_playground
     do
-        python3 run_slurm.py python3 train.py -s ~/datasets/flowmap/${METHOD}/${SCENE} --name ${SCENE}_${METHOD} -o
+        python3 run_slurm.py python3 train.py -s ~/datasets/flowmap/${METHOD}/${SCENE} --name paper_v1_${SCENE}_${METHOD} -o
     done
 done

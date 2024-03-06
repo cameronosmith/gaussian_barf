@@ -90,7 +90,7 @@ if __name__ == "__main__":
     for d in ("datasets", "metrics", "assets", "psnrs"):
         os.system(f"ln -s {Path.cwd()}/{d} {job_dir}/{d}")
     for f in ("render.py", "run_slurm.py", "train.py", "metrics.py", "convert.py"):
-        os.system(f"cp -r {f} {job_dir}/{f}")
+        os.system(f"cp {f} {job_dir}/{f}")
 
     submit_slurm_job(
         job_name,
