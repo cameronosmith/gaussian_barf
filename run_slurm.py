@@ -39,7 +39,7 @@ def submit_slurm_job(
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task={num_cpus}
-#SBATCH --mem={memory}
+#SBATCH --mem-per-cpu={memory}
 #SBATCH --partition=vision-sitzmann
 #SBATCH --qos=vision-sitzmann-main
 #SBATCH --time={time}
