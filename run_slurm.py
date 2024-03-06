@@ -44,6 +44,7 @@ def submit_slurm_job(
 #SBATCH --qos=vision-sitzmann-main
 #SBATCH --time={time}
 
+/scratch/charatan/miniconda3/bin/activate
 source {Path.home()}/.bashrc
 cd {job_dir}
 conda activate {env_name}
