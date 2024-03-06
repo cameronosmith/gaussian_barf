@@ -61,11 +61,10 @@ conda activate {env_name}
 
 
 if __name__ == "__main__":
-    assert (Path.cwd() / "flowmap").exists()
-    assert (Path.cwd() / "config").exists()
+    # Make sure we're in the right place (maybe)
+    assert (Path.cwd() / ".git").exists()
 
     # Figure out what to call the run.
-
     command = " ".join(sys.argv[1:])
     name = None
     for name_source in ("-n", "--name"):
