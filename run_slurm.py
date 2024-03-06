@@ -39,7 +39,7 @@ def submit_slurm_job(
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task={num_cpus}
-#SBATCH --mem-per-cpu={memory}
+#SBATCH --mem={memory}
 #SBATCH --partition=vision-sitzmann
 #SBATCH --qos=vision-sitzmann-main
 #SBATCH --time={time}
@@ -97,7 +97,7 @@ if __name__ == "__main__":
         job_dir,
         f"{command}",
         f"{getpass.getuser()}@mit.edu",
-        "128G",
+        "256G",
         1,
         8,
         "24:00:00",
