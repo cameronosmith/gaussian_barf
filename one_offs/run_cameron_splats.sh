@@ -1,5 +1,8 @@
 for METHOD in \
-    colmap
+    colmap \
+    mvscolmap \
+    flowmap \
+    droid
 do
     for SCENE in \
         bench \
