@@ -41,6 +41,7 @@ class Scene:
         self.test_cameras = {}
 
         if ".pt" in args.source_path:
+            raise NotImplementedError("Use COLMAP input format.")
             scene_info = sceneLoadTypeCallbacks["FlowCam"](args.source_path, args.images, args.eval)
         elif os.path.exists(os.path.join(args.source_path, "sparse")):
             scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval)

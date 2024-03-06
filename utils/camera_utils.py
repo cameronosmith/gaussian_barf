@@ -138,9 +138,6 @@ def loadCam(args, id, cam_info, resolution_scale):
         scale = float(global_down) * float(resolution_scale)
         resolution = (int(orig_w / scale), int(orig_h / scale))
 
-        #resolution = [864,608] # our mipnerf res
-    if orig_w>orig_h: resolution=[1024,672]
-
     resized_image_rgb = PILtoTorch(cam_info.image, resolution)
 
     gt_image = resized_image_rgb[:3, ...]

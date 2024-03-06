@@ -182,6 +182,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
             if iteration%100==0:torch.save([transf_params.detach().clone(),focal_params.detach().clone()],scene.model_path+"/poses.pt")
             if (iteration in [300,500,1000] or iteration%3000==1 and 1) and 0:
+                raise NotImplementedError("This is still trying to auto-detect the colmap_cams flag. If you get rid of this error, you need to fix that.")
+
                 colmap_cams=any([x in scene.getTrainCameras()[0].image_name for x in ["DSC","IMG","DJI","frame"]]) or 0
                 if not colmap_cams:
                     #stride=10 if len(transf_params)>200 else 1
@@ -264,7 +266,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             tb_writer.add_scalar('train_loss_patches/Focal_GT_Y', focal_params_gt[1], iteration)
 
             # Log and save
-            training_report(tb_writer, iteration, Ll1, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render, (pipe, background),transf_params=transf_params,focal_params=focal_params)
+            training_report(tb_writer, iteration, Ll1, loss, l1_loss, iter_start.elapsed_time(iter_end), testing_iterations, scene, render, (pipe, background),transf_params=transf_params,focal_params=focal_params, viewpoint_stack=viewpoint_stack)
             if (iteration in saving_iterations):
                 print("\n[ITER {}] Saving Gaussians".format(iteration))
                 scene.save(iteration)
@@ -314,7 +316,7 @@ def prepare_output_and_logger(args,name):
         print("Tensorboard not available: not logging progress")
     return tb_writer
 
-def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_iterations, scene : Scene, renderFunc, renderArgs,transf_params,focal_params):
+def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_iterations, scene : Scene, renderFunc, renderArgs,transf_params,focal_params, viewpoint_stack=None):
     if tb_writer:
         tb_writer.add_scalar('train_loss_patches/l1_loss', Ll1.item(), iteration)
         tb_writer.add_scalar('train_loss_patches/total_loss', loss.item(), iteration)
@@ -337,12 +339,16 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
 
                 l1_test = 0.0
                 psnr_test = 0.0
-                colmap_cams=any([x in scene.getTrainCameras()[0].image_name for x in ["DSC","IMG","DJI","frame"]]) or 0
                 for idx, viewpoint in enumerate(config['cameras']):
-                    if not colmap_cams:
-                        image = render(viewpoint, scene.gaussians, pre_transf=lift_to_poses(transf_params[int(viewpoint.image_name) if 1 else idx]),fov=focal_params,*renderArgs)["render"].clip(0,1)
-                    else:
-                        image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs)["render"], 0.0, 1.0)
+                    # Get the camera index within the viewpoint stack.
+                    camera_index = [camera.image_name for camera in viewpoint_stack].index(viewpoint.image_name)
+
+                    # Trust but verify...
+                    # If this throws, the COLMAP data doesn't have the standard IDs (starting at 1).
+                    assert camera_index == viewpoint.colmap_id - 1
+
+                    image = render(viewpoint, scene.gaussians, pre_transf=lift_to_poses(transf_params[camera_index]),fov=focal_params,*renderArgs)["render"].clip(0,1)
+               
                     gt_image = torch.clamp(viewpoint.original_image.to("cuda"), 0.0, 1.0)
                     if tb_writer and (idx < 5):
                         tb_writer.add_images(config['name'] + "_view_{}/render".format(viewpoint.image_name), image[None], global_step=iteration)
