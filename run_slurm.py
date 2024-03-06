@@ -85,10 +85,12 @@ if __name__ == "__main__":
     job_dir.mkdir(exist_ok=True, parents=True)
 
     # Copy/link the stuff that's needed to make the model run.
-    for dir in ("arguments", "gaussian_renderer", "lpipsPyTorch", "scene", "utils"):
-        os.system(f"cp -r {dir} {job_dir}/{dir}")
-    for dir in ("datasets", "metrics", "assets", "psnrs"):
-        os.system(f"ln -s {Path.cwd()}/{dir} {job_dir}/{dir}")
+    for d in ("arguments", "gaussian_renderer", "lpipsPyTorch", "scene", "utils"):
+        os.system(f"cp -r {d} {job_dir}/{d}")
+    for d in ("datasets", "metrics", "assets", "psnrs"):
+        os.system(f"ln -s {Path.cwd()}/{d} {job_dir}/{d}")
+    for f in ("render.py", "run_slurm.py", "train.py", "metrics.py", "convert.py"):
+        os.system(f"cp -r {f} {job_dir}/{f}")
 
     submit_slurm_job(
         job_name,
