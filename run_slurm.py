@@ -72,7 +72,7 @@ if __name__ == "__main__":
     for name_source in ("-n", "--name"):
         try:
             index = sys.argv[1:].index(name_source)
-            name = sys.argv[1:][index]
+            name = sys.argv[1:][index + 1]
             break
         except ValueError:
             pass
