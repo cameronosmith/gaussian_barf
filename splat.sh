@@ -2,7 +2,12 @@ for METHOD in \
     colmap \
     mvscolmap \
     flowmap \
-    droid
+    droid \
+    flowmap_ablation_depth_var \
+    flowmap_ablation_focal_var \
+    flowmap_ablation_pose_var \
+    flowmap_ablation_scratch \
+    flowmap_ablation_no_tracks
 do
     for SCENE in \
         bench \
