@@ -13,6 +13,6 @@ do
         room \
         garden
     do
-        python3 run_slurm.py python3 train.py -s /scratch/charatan/flowmap_supplemental_converted/${METHOD}/${SCENE} --name paper_c2_${SCENE}_${METHOD} -o
+        python3 run_slurm.py python3 train.py -s /scratch/charatan/flowmap_supplemental_converted/${SCENE}/${METHOD} --name paper_c2_${SCENE}_${METHOD} -o
     done
 done
