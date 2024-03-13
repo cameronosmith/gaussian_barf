@@ -180,7 +180,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(novel_images).clip(0,1)]
                 imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_rgb.mp4", frames, fps=8, quality=7)
 
-            if iteration%100==0:torch.save([transf_params.detach().clone(),focal_params.detach().clone()],scene.model_path+"/poses.pt")
+            if iteration%100==1:torch.save([transf_params.detach().clone(),focal_params.detach().clone()],scene.model_path+"/poses.pt")
             if (iteration in [300,500,1000] or iteration%3000==1 and 1) and 0:
                 raise NotImplementedError("This is still trying to auto-detect the colmap_cams flag. If you get rid of this error, you need to fix that.")
 
