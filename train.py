@@ -146,10 +146,11 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
 
             if args.render_checkpoint:
                 gaussians.load_ply(args.render_checkpoint)
+                transf_params,focal_params=torch.load("/".join(args.render_checkpoint.split("/")[:-3])+"/poses.pt")
                 all_cams_=sorted(scene.getTrainCameras(),key=lambda x:x.image_name)
                 all_cams=torch.stack([lift_to_poses(transf_params[int(cam.image_name)]) for cam in all_cams_])
                 interp_poses=render_time_interp(all_cams)
-                interp_poses2=render_time_interp(all_cams,wobble=True)
+                interp_poses2=render_time_interp(all_cams,wobble=False)
                 novel_images,vid_depths,novel_both=[],[],[]
 
                 #fig=plt.figure();ax = fig.add_subplot(111, projection='3d');
@@ -173,12 +174,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 novel_both =[ torch.cat((x.cpu(),y.cpu()),-1) for x,y in zip(novel_images,vid_depths)] 
                 frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(novel_both).clip(0,1)]
                 print("writing frames")
+                os.makedirs("output/renders",exist_ok=True)
                 imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_both.mp4", frames, fps=8, quality=7)
                 print("output/renders/"+args.render_checkpoint.split("/")[1]+"_both.mp4")
                 frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(vid_depths).clip(0,1)]
                 imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_depth.mp4", frames, fps=8, quality=7)
                 frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(novel_images).clip(0,1)]
                 imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_rgb.mp4", frames, fps=8, quality=7)
+                done
 
             if iteration%100==1:torch.save([transf_params.detach().clone(),focal_params.detach().clone()],scene.model_path+"/poses.pt")
             if (iteration in [300,500,1000] or iteration%3000==1 and 1) and 0:

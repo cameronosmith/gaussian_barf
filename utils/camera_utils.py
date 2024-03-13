@@ -182,8 +182,10 @@ def camera_to_JSON(id, camera : Camera):
     return camera_entry
 
 def render_time_interp(all_poses,wobble=False):
-    pos_spline_idxs=torch.linspace(0,all_poses.size(0)-1,15 if 1 else 40)
-    rot_spline_idxs=torch.linspace(0,all_poses.size(0)-1,15 if 1 else 40)
+    #pos_spline_idxs=torch.linspace(0,all_poses.size(0)-1,15 if 1 else 40)
+    #rot_spline_idxs=torch.linspace(0,all_poses.size(0)-1,15 if 1 else 40)
+    pos_spline_idxs=torch.arange(all_poses.size(0)).float()
+    rot_spline_idxs=torch.arange(all_poses.size(0)).float()
 
     all_pos_splines=[]
     all_quat_splines=[]
