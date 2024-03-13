@@ -87,7 +87,7 @@ if __name__ == "__main__":
     # Copy/link the stuff that's needed to make the model run.
     for d in ("arguments", "gaussian_renderer", "lpipsPyTorch", "scene", "utils"):
         os.system(f"cp -r {d} {job_dir}/{d}")
-    for d in ("datasets", "metrics", "assets", "psnrs"):
+    for d in ("datasets", "metrics", "assets", "psnrs", "output"):
         os.system(f"ln -s {Path.cwd()}/{d} {job_dir}/{d}")
     for f in ("render.py", "run_slurm.py", "train.py", "metrics.py", "convert.py"):
         os.system(f"cp {f} {job_dir}/{f}")
