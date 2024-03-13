@@ -5,13 +5,14 @@ for METHOD in \
     flowmap_ablation_two_stage_rerun
 do
     for SCENE in \
-        fortress \
-        fern \
-        orchids \
-        trex \
-        counter \
-        room \
-        garden
+        bench \
+        bonsai \
+        caterpillar \
+        flower \
+        horns \
+        hydrant \
+        kitchen \
+        playground
     do
         python3 run_slurm.py python3 train.py -s /scratch/charatan/flowmap_rerun_ablations_converted/${METHOD}/${SCENE} --name paper_c2_${SCENE}_${METHOD} -o
     done
