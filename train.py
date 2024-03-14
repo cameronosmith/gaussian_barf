@@ -60,7 +60,6 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
     viewpoint_stack = scene.getTrainCameras().copy()
     viewpoint_stack_gt = scene.gt_cameras
 
-
     # Setup poses and focals as parameters to optionally fine-tune
     poses = torch.stack([cam.world_view_transform.T for cam in viewpoint_stack])
     focal_params = torch.tensor([viewpoint_stack[0].FoVx,viewpoint_stack[0].FoVy]).detach().clone().cuda()
@@ -170,17 +169,18 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     print("rendered")
                 min_depth=min([x.cpu().min() for x in vid_depths])
                 print("doing colormaps")
-                vid_depths =[ torch.from_numpy(cm.get_cmap('magma')(min_depth/vid_depth.cpu().numpy())).squeeze(-2)[...,:3].permute(2,0,1) for vid_depth in vid_depths] 
-                novel_both =[ torch.cat((x.cpu(),y.cpu()),-1) for x,y in zip(novel_images,vid_depths)] 
-                frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(novel_both).clip(0,1)]
+                #vid_depths =[ torch.from_numpy(cm.get_cmap('magma')(min_depth/vid_depth.cpu().numpy())).squeeze(-2)[...,:3].permute(2,0,1) for vid_depth in vid_depths] 
+                #novel_both =[ torch.cat((x.cpu(),y.cpu()),-1) for x,y in zip(novel_images,vid_depths)] 
+                #frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(novel_both).clip(0,1)]
+                #frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(novel_both).clip(0,1)]
                 print("writing frames")
                 os.makedirs("output/renders",exist_ok=True)
-                imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_both.mp4", frames, fps=8, quality=7)
-                print("output/renders/"+args.render_checkpoint.split("/")[1]+"_both.mp4")
-                frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(vid_depths).clip(0,1)]
-                imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_depth.mp4", frames, fps=8, quality=7)
+                #imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_both.mp4", frames, fps=10, quality=7)
+                #print("output/renders/"+args.render_checkpoint.split("/")[1]+"_both.mp4")
+                #frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(vid_depths).clip(0,1)]
+                #imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_depth.mp4", frames, fps=10, quality=7)
                 frames = [(255*x.permute(1,2,0).cpu().numpy()).astype(np.uint8) for x in torch.stack(novel_images).clip(0,1)]
-                imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_rgb.mp4", frames, fps=8, quality=7)
+                imageio.mimwrite("output/renders/"+args.render_checkpoint.split("/")[1]+"_rgb.mp4", frames, fps=30, quality=7)
                 done
 
             if iteration%100==1:torch.save([transf_params.detach().clone(),focal_params.detach().clone()],scene.model_path+"/poses.pt")
