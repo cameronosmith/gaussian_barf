@@ -15,6 +15,6 @@ do
         kitchen \
         playground
     do
-        echo python3 run_slurm.py python3 train.py -s /scratch/charatan/flowmap_rerun_ablations_converted/${METHOD}/${SCENE} --name paper_c2_${SCENE}_${METHOD} --render_checkpoint output/paper_c2_${SCENE}_${METHOD}/point_cloud/iteration_30000/point_cloud.ply
+        python3 run_slurm.py python3 train.py -s /scratch/charatan/flowmap_rerun_ablations_converted/${METHOD}/${SCENE} --name paper_c2_${SCENE}_${METHOD} --render_checkpoint output/paper_c2_${SCENE}_${METHOD}/point_cloud/iteration_30000/point_cloud.ply
     done
 done
