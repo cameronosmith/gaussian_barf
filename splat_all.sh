@@ -12,6 +12,6 @@ for METHOD in \
     flowmap_ablation_single_stage
 do
     for SCENE in /scratch/charatan/projects/flowmap/results/colmap/*/ ; do
-        python3 run_slurm.py python3 train.py -s /scratch/charatan/projects/flowmap/results/${METHOD}/$(basename ${SCENE}) --name paper_v14_${METHOD}_$(basename ${SCENE})
+        python3 run_slurm.py python3 train.py -s /scratch/charatan/projects/flowmap/results/${METHOD}/$(basename ${SCENE}) --name paper_v14_${METHOD}_$(basename ${SCENE}) -o
     done
 done
