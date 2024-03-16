@@ -1,4 +1,5 @@
 for METHOD in \
+    colmap_rerun \
     flowmap_ablation_depth_var_rerun \
     flowmap_ablation_focal_var_rerun \
     flowmap_ablation_implicit_rerun \
