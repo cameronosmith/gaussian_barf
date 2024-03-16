@@ -10,7 +10,6 @@ for METHOD in \
     ablation_single_stage
 do
     for SCENE in /scratch/charatan/projects/flowmap/results/colmap/*/ ; do
-        python3 run_slurm.py python3 train.py -s /scratch/charatan/projects/flowmap/results/${METHOD}/$(basename ${SCENE}) --name paper_v14_$(basename ${SCENE})_${METHOD}
-        python3 run_slurm.py python3 train.py -s /scratch/charatan/projects/flowmap/results/${METHOD}/$(basename ${SCENE}) --name paper_v14_$(basename ${SCENE})_${METHOD} --render_checkpoint output/paper_v14_$(basename ${SCENE})_${METHOD}/point_cloud/iteration_30000/point_cloud.ply
+        python3 run_slurm.py python3 train.py -s /scratch/charatan/projects/flowmap/results/${METHOD}/$(basename ${SCENE}) --name paper_v14_$(basename ${SCENE})_${METHOD} && python3 train.py -s /scratch/charatan/projects/flowmap/results/${METHOD}/$(basename ${SCENE}) --name paper_v14_$(basename ${SCENE})_${METHOD} --render_checkpoint output/paper_v14_$(basename ${SCENE})_${METHOD}/point_cloud/iteration_30000/point_cloud.ply
     done
 done
