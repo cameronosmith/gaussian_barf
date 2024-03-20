@@ -8,13 +8,12 @@
 #
 # For inquiries contact  george.drettakis@inria.fr
 #
-
+import numpy as np
 import os
-import random
 import json
 from utils.system_utils import searchForMaxIteration
-from scene.dataset_readers import sceneLoadTypeCallbacks
-from scene.gaussian_model import GaussianModel
+from scene.dataset_readers import sceneLoadTypeCallbacks, SceneInfo
+from scene.gaussian_model import GaussianModel, BasicPointCloud
 from arguments import ModelParams
 from utils.camera_utils import cameraList_from_camInfos, camera_to_JSON
 
@@ -87,6 +86,17 @@ class Scene:
             print("hardcoded loading from iter")
             self.gaussians.load_ply("output/gt_k_refactor_horns_splat/point_cloud/iteration_30000/point_cloud.ply")
         else:
+            if args.limit_gaussians:
+                # Limit to 1e7 points.
+                a, b, c = scene_info.point_cloud
+                mask = np.arange(len(a))
+                np.random.shuffle(mask)
+                mask = mask < 1e7
+                scene_info = SceneInfo(
+                    BasicPointCloud(a[mask], b[mask], c[mask]),
+                    *scene_info[1:],
+                )
+
             self.gaussians.create_from_pcd(scene_info.point_cloud, self.cameras_extent)
 
     def save(self, iteration):
