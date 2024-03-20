@@ -1,26 +1,18 @@
 for METHOD in \
     colmap \
     mvscolmap \
-    flowmap \
     droid \
-    flowmap_ablation_depth_var \
-    flowmap_ablation_focal_var \
-    flowmap_ablation_pose_var \
-    flowmap_ablation_scratch \
-    flowmap_ablation_no_tracks
+    flowmap_ablation_none \
+    flowmap_ablation_random_initialization \
+    flowmap_ablation_midas_initialization \
+    flowmap_ablation_explicit_depth \
+    flowmap_ablation_explicit_focal_length \
+    flowmap_ablation_explicit_pose \
+    flowmap_ablation_no_correspondence_weights \
+    flowmap_ablation_no_tracks \
+    flowmap_ablation_single_stage
 do
-    for SCENE in \
-        bench \
-        hydrant \
-        flower \
-        horns \
-        bonsai \
-        kitchen \
-        caterpillar \
-        playground \
-        office0 \
-        room0
-    do
-        python3 run_slurm.py python3 train.py -s /scratch/charatan/flowmap_converted/${METHOD}/${SCENE} --name paper_c2_${SCENE}_${METHOD} -o
+    for SCENE in /scratch/charatan/projects/flowmap/results/colmap/*/ ; do
+        python3 run_slurm.py python3 train.py -s /scratch/charatan/projects/flowmap/results/${METHOD}/$(basename ${SCENE}) --name paper_v14_${METHOD}_$(basename ${SCENE}) -o
     done
 done
