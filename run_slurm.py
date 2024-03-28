@@ -30,6 +30,7 @@ def submit_slurm_job(
     env_name: Optional[str] = None,
 ):
     slurm_file = f"""#!/bin/bash
+#SBATCH -w sitzmann-a100-1
 #SBATCH -J {job_name}
 #SBATCH -o {job_dir}/out_%j.out
 #SBATCH -e {job_dir}/error_%j.err
