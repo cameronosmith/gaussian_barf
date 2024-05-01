@@ -23,8 +23,6 @@ from plyfile import PlyData, PlyElement
 from utils.sh_utils import SH2RGB
 from scene.gaussian_model import BasicPointCloud
 
-barf=False
-
 class CameraInfo(NamedTuple):
     uid: int
     R: np.array
@@ -159,14 +157,6 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
     cam_infos = cam_infos_=sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
 
     start_i,max_i=0,1000
-    #start_i=0 if "cat" not in path else 35
-    #max_i = (65 if "kitchen" in path else 60 if "horns" in path else 30 if "flower" in path else 60 if "teddybear" in path else 60 if "hydrant" in path else 150)+start_i
-    print("max i",max_i)
-    if 0:
-        import torch
-        tmp= {k:v.cpu() if type(v)==torch.Tensor else v for k,v in torch.load("../flowmap/aligned.pt").items()}
-        cam_infos = readFlowCamCameras(tmp=tmp)[0]
-
     cam_infos=cam_infos[start_i:max_i]
     test_idxs=list(range(len(cam_infos)))[1:-1:10] if eval else []
     print(test_idxs)
@@ -199,7 +189,6 @@ def readColmapSceneInfo(path, images, eval, llffhold=8):
     except:
         pcd = None
 
-    #stride=int(pcd.points.shape[0]/500000)
     print(pcd.points.shape[0],"points")
 
     scene_info = SceneInfo(point_cloud=pcd,
@@ -304,13 +293,10 @@ def readFlowCamCameras(tmp):
             c2w=np.array(tmp[pose_name][idx])
             w2c = np.linalg.inv(c2w)
 
-            if barf and pose_name is not "gt_poses":w2c=np.eye(4)#+np.random.randn(*np.eye(4).shape)/10
-
             R_ = np.transpose(w2c[:3,:3])  # R is stored transposed due to 'glm' in CUDA code
             T_ = w2c[:3, 3]
             norm_K=tmp[intrinsics_name][0].clone()
             K=np.array(tmp[intrinsics_name][0])
-            #if idx==0: print(K)
 
             K[0]*=width_
             K[1]*=height_
@@ -321,8 +307,6 @@ def readFlowCamCameras(tmp):
             cams.append(cam_info_)
         return cams
     out= [get_poses("poses","intrinsics"),get_poses("novel_poses" if "novel_poses" in tmp else "poses","intrinsics"),get_poses("gt_poses","gt_intrinsics") if "gt_poses" in tmp else get_poses("poses","intrinsics")]
-    #print("USING GT INTRINSICS\n*10")
-    #out= [get_poses("poses","gt_intrinsics"),get_poses("novel_poses" if "novel_poses" in tmp else "poses","intrinsics"),get_poses("gt_poses","gt_intrinsics")]
     return out
 def readFlowCamSceneInfo(path, images, eval, llffhold=8):
 
@@ -334,30 +318,13 @@ def readFlowCamSceneInfo(path, images, eval, llffhold=8):
 
     eval="gt_poses" in tmp
 
-    #sf=.5
-    #with torch.no_grad(): tmp["world_crds"]=torch.nn.functional.interpolate(tmp["world_crds"].permute(0,2,1).unflatten(-1,tmp["rgb"].shape[-2:]),scale_factor=sf).flatten(-2,-1).permute(0,2,1)
-    #with torch.no_grad(): tmp["rgb"]=torch.nn.functional.interpolate(tmp["rgb"],scale_factor=sf)
-
     reading_dir = "images" if images == None else images
     cam_infos = readFlowCamCameras(tmp=tmp)
 
     nerf_normalization = getNerfppNorm(cam_infos[0])
 
-    stride=max(1,int(len(tmp["world_crds"].flatten(0,1))/150_000))
-    print("stride: ",stride)
-    #points=tmp["world_crds"].flatten(0,1)[::5].numpy()
-    #rgb=tmp["rgb_crds"].flatten(0,1)[::5].numpy()
     points=tmp["world_crds"].flatten(0,1)[::5].numpy()
     rgb=tmp["rgb_crds"].flatten(0,1)[::5].numpy()
-
-    #idxs=torch.randperm(len(tmp["rgb"][:,0].flatten()))[:200000]
-    #points=torch.nn.functional.interpolate(tmp["world_crds"].permute(0,2,1).unflatten(-1,tmp["flow_inp_"][0].shape[1:]),tmp["rgb"].shape[-2:]).flatten(-2,-1).permute(0,2,1).flatten(0,1)[idxs].numpy()
-    #rgb=tmp["rgb"].flatten(-2,-1).permute(0,2,1).flatten(0,1)[idxs].numpy()/255
-
-    if barf:
-        rgb=np.random.rand(*rgb.shape)
-        pmax,pmin=torch.from_numpy(points).max(dim=0)[0].numpy(),torch.from_numpy(points).min(dim=0)[0].numpy()
-        points=np.random.rand(*points.shape)*(pmax-pmin)+pmin
 
     pcd= BasicPointCloud(points=points, colors=rgb, normals=points*0)
     ply_path="tmp.ply"
@@ -367,8 +334,7 @@ def readFlowCamSceneInfo(path, images, eval, llffhold=8):
     test_idxs=list(range(len(cam_infos[0])))[1:-1:10] if eval else []
     print(test_idxs)
     if eval:
-        #train_cam_infos = [c for idx, c in enumerate(cam_infos[0]) if idx not in test_idxs]
-        train_cam_infos =cam_infos[0] #[c for idx, c in enumerate(cam_infos[0]) ]
+        train_cam_infos =cam_infos[0]
         test_cam_infos = [c for idx, c in enumerate(cam_infos[0]) if idx in test_idxs]
     else:
         train_cam_infos = cam_infos[0]

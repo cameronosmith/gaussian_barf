@@ -1,10 +1,14 @@
-example run: `python train.py -s /home/camsmith/repos/flowmap/pose_exps/poses_bonsai_150.pt --start_cam_opt 100 -o`
+# Gaussian Splatting Modified for Joint Camera Refinement
 
-relevant arguments:
+This project just modifies the official gaussian splatting code to jointly optimize camera poses alongside the splat
 
--s : the scene path, either as a flowmap.pt file or colmap scene directory as in the original splatting code usage
+In practice, this is just a slight refinement to the poses for more pixel-perfect alignment rather than a robust pose optimization
 
--start_cam_opt : what iteration to start the camera optimization -- don't start it at 0 since the point cloud is very cloudy at the beginning and it's not the right time to refine the camera parameters since the scene needs to be quickly refined first
+The code is not very polished but we hope it's useful
 
+## Usage
 
-use the conda environment at `conda activate /home/camsmith/miniconda3/envs/envfile_gaussian_splatting`
+Just point your colmap-formatted scene as follows: `python train.py -s /nobackup/flowmap_results/colmap/tandt_caterpillar --name test_caterpillar -o` and it should launch a wandb run for the optimization 
+
+## Requirements
+The environment to run gaussian splatting is a bit tricky but you should start with getting the official splatting code running (https://github.com/graphdeco-inria/gaussian-splatting) and then come here after and it should just work

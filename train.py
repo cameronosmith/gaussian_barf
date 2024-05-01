@@ -91,6 +91,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             print("increasing sh degree")
             gaussians.oneupSHdegree()
 
+        # Camera learning rate -- not too much thought behind this schedule, just empirically worked decently and not very sensitive
         s=1
         c_iteration = iteration - args.start_cam_opt 
         cam_lr = (5e-5 if c_iteration<s*15000 else 5e-6 if c_iteration<s*20000 else 0)
@@ -143,6 +144,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             if iteration == opt.iterations:
                 progress_bar.close()
 
+            # Custom video renders with novel paths - hacky but leaving here in case useful - assumes poses.pt under render ckpt path holds optimized poses
             if args.render_checkpoint:
                 gaussians.load_ply(args.render_checkpoint)
                 transf_params,focal_params=torch.load("/".join(args.render_checkpoint.split("/")[:-3])+"/poses.pt")
@@ -151,15 +153,6 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 interp_poses=render_time_interp(all_cams)
                 interp_poses2=render_time_interp(all_cams,wobble=False)
                 novel_images,vid_depths,novel_both=[],[],[]
-
-                #fig=plt.figure();ax = fig.add_subplot(111, projection='3d');
-                #ax.plot(*all_cams[:,:3,-1].cpu().unbind(1),c="red",label="Estimated Trajectory");
-                #ax.plot(*interp_poses[:,:3,-1].cpu().unbind(1),c="black",label="GT Trajectory");
-                #ax.plot(*interp_poses2[:,:3,-1].cpu().unbind(1),c="blue",label="GT Trajectory");
-                #plt.legend()
-                #plt.savefig("/home/camsmith/tmp.png")
-                #plt.close()
-
                 for i,cam in enumerate(interp_poses):
                     print(i)
                     print("rendering")
@@ -417,8 +410,7 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
     args.save_iterations.append(args.iterations)
 
-    run = wandb.init(entity="scene-representation-group",project="gaussian-barf",mode="online" if args.online else "disabled",
-                    name=args.name, sync_tensorboard=True)
+    run = wandb.init(project="gaussian-barf",mode="online" if args.online else "disabled", name=args.name, sync_tensorboard=True)
     
     print("Optimizing " + args.model_path)
 
